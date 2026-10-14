@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SIM Kuliah | Merah Putih</title>
-    <!-- Vue 3 Production Build (Lebih Cepat & Stabil) -->
+    <!-- Vue 3 Production Build -->
     <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -86,6 +86,7 @@
             <div class="flex flex-wrap items-center justify-between mb-1 gap-2">
                 <h2 class="text-lg font-semibold flex items-center text-slate-700">
                     <span class="mr-2 text-blue-500">☑</span> Tugas & Deadline
+                    <span v-if="isLoadingTasks" class="ml-2 text-xs text-blue-500 animate-pulse">(Sinkronisasi...)</span>
                 </h2>
                 
                 <div class="flex bg-slate-200/60 p-1 rounded-lg text-xs font-medium relative">
@@ -238,21 +239,68 @@ createApp({
             }, 50);
         };
 
-        const tasks = ref([
+        // --- LOCALSTORAGE & SUPABASE CONFIG FOR TASKS ---
+        const STORAGE_KEY = 'sim_kuliah_tasks_v1';
+        const supabaseUrl = 'https://dfmgdljobxrtanxdnqou.supabase.co/rest/v1';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRmbWdkbGpvYnhydGFueGRucW91Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE5Nzc3NzQsImV4cCI6MjEwNzU1Mzc3NH0.RjSnbLCLOqYvKJApzkvOThre1Mi6zHBrDbQMIv2ZRNQ';
+        
+        const isLoadingTasks = ref(false);
+
+        // Load awal dari localStorage agar instan
+        const savedTasks = localStorage.getItem(STORAGE_KEY);
+        const tasks = ref(savedTasks ? JSON.parse(savedTasks) : [
             { id: 1, title: 'Makalah Etika Digital', done: false, deadline: '2026-10-14' },
             { id: 2, title: 'Rakit BMS 4S', done: false, deadline: '2026-10-16' },
             { id: 3, title: 'Beli Sepatu Lari', done: true, deadline: '2026-10-10' }
         ]);
 
+        const saveToLocalStorage = () => {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks.value));
+        };
+
+        // Sinkronisasi dengan Supabase (Load & Backup)
+        const ambilTugasDariSupabase = async () => {
+            isLoadingTasks.value = true;
+            try {
+                const response = await fetch(`${supabaseUrl}/tugas_kuliah?select=*`, {
+                    headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data && data.length > 0) {
+                        // Jika Supabase ada data, gunakan sebagai acuan dan perbarui localStorage
+                        tasks.value = data;
+                        saveToLocalStorage();
+                    } else if (tasks.value.length > 0) {
+                        // Jika Supabase kosong tapi lokal ada, backup data lokal ke Supabase
+                        for (const t of tasks.value) {
+                            await fetch(`${supabaseUrl}/tugas_kuliah`, {
+                                method: 'POST',
+                                headers: { 
+                                    'apikey': supabaseKey, 
+                                    'Authorization': `Bearer ${supabaseKey}`,
+                                    'Content-Type': 'application/json',
+                                    'Prefer': 'resolution=merge-duplicates'
+                                },
+                                body: JSON.stringify(t)
+                            });
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error("Gagal sinkronisasi tugas:", error);
+            } finally {
+                isLoadingTasks.value = false;
+            }
+        };
+
         const arsip = ref([]);
         const isLoadingArsip = ref(true);
 
         const ambilDataDariSupabase = async () => {
-            const supabaseUrl = 'https://dfmgdljobxrtanxdnqou.supabase.co/rest/v1/arsip_kuliah?select=*';
-            const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRmbWdkbGpvYnhydGFueGRucW91Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE5Nzc3NzQsImV4cCI6MjEwNzU1Mzc3NH0.RjSnbLCLOqYvKJApzkvOThre1Mi6zHBrDbQMIv2ZRNQ';
-            
             try {
-                const response = await fetch(supabaseUrl, {
+                const response = await fetch(`${supabaseUrl}/arsip_kuliah?select=*`, {
                     headers: {
                         'apikey': supabaseKey,
                         'Authorization': `Bearer ${supabaseKey}`
@@ -283,50 +331,47 @@ createApp({
             return [...result].sort((a, b) => a.done - b.done || new Date(a.deadline || '2099') - new Date(b.deadline || '2099'));
         });
 
-       // Fungsi bantuan untuk mengubah teks menjadi Title Case (misal: "matematika 1" -> "Matematika 1")
-const toTitleCase = (str) => {
-    if (!str) return 'Lainnya';
-    return str.trim().toLowerCase().replace(/\b\w/g, char => char.toUpperCase());
-};
+        const toTitleCase = (str) => {
+            if (!str) return 'Lainnya';
+            return str.trim().toLowerCase().replace(/\b\w/g, char => char.toUpperCase());
+        };
 
-const filteredGroupedArsip = computed(() => {
-    const query = searchQuery.value.toLowerCase();
-    const dateQuery = searchDate.value;
-    
-    const filteredArray = arsip.value.filter(item => {
-        let matchText = true;
-        let matchDate = true;
-        if (query) {
-            const matkulMatch = item.matkul ? item.matkul.toLowerCase().includes(query) : false;
-            const katMatch = item.kategori ? item.kategori.toLowerCase().includes(query) : false;
-            const judulMatch = item.judul ? item.judul.toLowerCase().includes(query) : false;
-            matchText = matkulMatch || katMatch || judulMatch;
-        }
-        if (dateQuery) matchDate = item.tanggal === dateQuery;
-        return matchText && matchDate;
-    });
+        const filteredGroupedArsip = computed(() => {
+            const query = searchQuery.value.toLowerCase();
+            const dateQuery = searchDate.value;
+            
+            const filteredArray = arsip.value.filter(item => {
+                let matchText = true;
+                let matchDate = true;
+                if (query) {
+                    const matkulMatch = item.matkul ? item.matkul.toLowerCase().includes(query) : false;
+                    const katMatch = item.kategori ? item.kategori.toLowerCase().includes(query) : false;
+                    const judulMatch = item.judul ? item.judul.toLowerCase().includes(query) : false;
+                    matchText = matkulMatch || katMatch || judulMatch;
+                }
+                if (dateQuery) matchDate = item.tanggal === dateQuery;
+                return matchText && matchDate;
+            });
 
-    return filteredArray.reduce((acc, item) => {
-        // Gabungkan huruf besar/kecil dengan Title Case
-        const matkulKey = toTitleCase(item.matkul);
-        const katKey = toTitleCase(item.kategori) || 'Umum';
-        
-        acc[matkulKey] = acc[matkulKey] || {};
-        acc[matkulKey][katKey] = acc[matkulKey][katKey] || [];
-        
-        // Buat judul file lebih informatif jika kolom judul hanya berupa angka (misal: "1" menjadi "Pertemuan 1")
-        const judulInformatif = (item.judul && !isNaN(item.judul.trim())) 
-            ? `Pertemuan ${item.judul.trim()}` 
-            : (item.judul || 'Tugas');
+            return filteredArray.reduce((acc, item) => {
+                const matkulKey = toTitleCase(item.matkul);
+                const katKey = toTitleCase(item.kategori) || 'Umum';
+                
+                acc[matkulKey] = acc[matkulKey] || {};
+                acc[matkulKey][katKey] = acc[matkulKey][katKey] || [];
+                
+                const judulInformatif = (item.judul && !isNaN(item.judul.trim())) 
+                    ? `Pertemuan ${item.judul.trim()}` 
+                    : (item.judul || 'Tugas');
 
-        acc[matkulKey][katKey].push({
-            ...item,
-            judul: judulInformatif
+                acc[matkulKey][katKey].push({
+                    ...item,
+                    judul: judulInformatif
+                });
+                
+                return acc;
+            }, {});
         });
-        
-        return acc;
-    }, {});
-});
 
         const highlightText = (text) => {
             if (!text) return '';
@@ -338,24 +383,78 @@ const filteredGroupedArsip = computed(() => {
         const expandedMatkul = ref({});
         const toggleExpand = (matkul) => expandedMatkul.value[matkul] = !expandedMatkul.value[matkul];
 
-        const addTask = () => {
+        // --- TASK ACTIONS (LocalStorage + Supabase Sync) ---
+        const addTask = async () => {
             if (!newTask.value.title) {
                 showToast('Nama tugas tidak boleh kosong.');
                 return;
             }
-            tasks.value.unshift({ id: Date.now(), title: newTask.value.title, done: false, deadline: newTask.value.deadline });
+            const newT = { 
+                id: Date.now(), 
+                title: newTask.value.title, 
+                done: false, 
+                deadline: newTask.value.deadline || null 
+            };
+            
+            tasks.value.unshift(newT);
+            saveToLocalStorage();
             newTask.value = { title: '', deadline: '' };
             showToast('Tugas baru dicatat!');
+
+            // Sync ke Supabase di background
+            try {
+                await fetch(`${supabaseUrl}/tugas_kuliah`, {
+                    method: 'POST',
+                    headers: { 
+                        'apikey': supabaseKey, 
+                        'Authorization': `Bearer ${supabaseKey}`, 
+                        'Content-Type': 'application/json' 
+                    },
+                    body: JSON.stringify(newT)
+                });
+            } catch (e) {
+                console.error("Gagal backup tambah tugas ke Supabase:", e);
+            }
         };
 
-        const deleteTask = (id) => {
+        const deleteTask = async (id) => {
             tasks.value = tasks.value.filter(t => t.id !== id);
+            saveToLocalStorage();
             showToast('Tugas dihapus.');
+
+            // Sync hapus ke Supabase di background
+            try {
+                await fetch(`${supabaseUrl}/tugas_kuliah?id=eq.${id}`, {
+                    method: 'DELETE',
+                    headers: { 
+                        'apikey': supabaseKey, 
+                        'Authorization': `Bearer ${supabaseKey}` 
+                    }
+                });
+            } catch (e) {
+                console.error("Gagal hapus tugas di Supabase:", e);
+            }
         };
         
-        const toggleTask = (task) => {
+        const toggleTask = async (task) => {
             task.done = !task.done;
+            saveToLocalStorage();
             if(task.done) showToast('Mantap! <b>Selesai</b>');
+
+            // Sync update status ke Supabase di background
+            try {
+                await fetch(`${supabaseUrl}/tugas_kuliah?id=eq.${task.id}`, {
+                    method: 'PATCH',
+                    headers: { 
+                        'apikey': supabaseKey, 
+                        'Authorization': `Bearer ${supabaseKey}`, 
+                        'Content-Type': 'application/json' 
+                    },
+                    body: JSON.stringify({ done: task.done })
+                });
+            } catch (e) {
+                console.error("Gagal update status tugas di Supabase:", e);
+            }
         };
 
         const getUrgencyInfo = (deadline, done) => {
@@ -370,10 +469,11 @@ const filteredGroupedArsip = computed(() => {
 
         onMounted(() => {
             ambilDataDariSupabase();
+            ambilTugasDariSupabase();
         });
 
         return { 
-            searchQuery, searchDate, filterStatus, newTask, filteredAndSortedTasks, filteredGroupedArsip, toast, isLoadingArsip,
+            searchQuery, searchDate, filterStatus, newTask, filteredAndSortedTasks, filteredGroupedArsip, toast, isLoadingArsip, isLoadingTasks,
             expandedMatkul, toggleExpand, highlightText, addTask, deleteTask, toggleTask, getUrgencyInfo 
         };
     }
