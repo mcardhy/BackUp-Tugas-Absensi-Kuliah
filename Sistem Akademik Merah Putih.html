@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIM Kuliah | Merah Putih</title>
+    <!-- Vue 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <style>
+        /* Anti-FOUC: Sembunyikan elemen sampai Vue selesai dimuat */
+        [v-cloak] { display: none; }
+        
+        body { background-color: #f8fafc; font-family: 'Inter', sans-serif; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        /* Animasi List & Smooth Reordering */
+        .list-move, 
+        .list-enter-active, .list-leave-active { transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
+        .list-enter-from { opacity: 0; transform: translateX(-20px) scale(0.95); }
+        .list-leave-to { opacity: 0; transform: translateX(20px) scale(0.95); }
+        .list-leave-active { position: absolute; } 
+        
+        /* Animasi Toast */
+        .toast-enter-active, .toast-leave-active { transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .toast-enter-from, .toast-leave-to { opacity: 0; transform: translateY(20px) scale(0.9); }
+        
+        /* Animasi Accordion */
+        .accordion-wrapper { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.3s ease-out; }
+        .accordion-wrapper.is-open { grid-template-rows: 1fr; }
+        .accordion-inner { overflow: hidden; }
+    </style>
+</head>
+<body class="text-slate-800 antialiased flex flex-col min-h-screen selection:bg-blue-200 selection:text-blue-900">
+
+<div id="app" v-cloak class="max-w-6xl mx-auto p-4 md:p-6 flex-grow w-full">
+    
+    <!-- HEADER -->
+    <header class="mb-6 border-b border-slate-200 pb-4 flex flex-col gap-4">
+        <!-- Baris Atas: Logo, Judul, Logo TM -->
+        <div class="flex justify-between items-center w-full">
+            <div class="flex items-center gap-3 sm:gap-4 group cursor-default">
+                <img src="Logo-Untag.jpg" alt="Logo Untag Surabaya" class="h-10 sm:h-12 md:h-14 w-auto object-contain drop-shadow-sm transition-transform duration-300 group-hover:scale-105">
+                <div>
+                    <h1 class="text-xl sm:text-2xl font-bold text-slate-800 tracking-tight flex items-center">SIM Kuliah</h1>
+                    <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Ardita Rizki F. (0082) • Teknik Mesin</p>
+                </div>
+            </div>
+            <img src="TM_Untag.webp" alt="Logo TM Untag" class="w-12 h-12 sm:w-14 sm:h-14 rounded-full object-cover border-2 border-white shadow-md bg-white transition-transform duration-300 hover:rotate-6 hover:scale-105">
+        </div>
+        
+        <!-- Baris Bawah: Filter & Pencarian -->
+        <div class="flex flex-col sm:flex-row gap-3 w-full lg:justify-end">
+            <!-- Filter Tanggal -->
+            <div class="relative w-full sm:w-44 lg:w-48 group">
+                <input 
+                    v-model="searchDate" 
+                    type="date" 
+                    class="w-full bg-white border border-slate-300 rounded-lg text-sm px-3 py-2 text-slate-600 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 shadow-sm transition-all cursor-pointer"
+                    title="Filter Tanggal"
+                >
+                <button v-if="searchDate" @click="searchDate = ''" class="absolute right-8 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500 bg-white px-1 transition-colors active:scale-90">
+                    <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                </button>
+            </div>
+
+            <!-- Cari Teks -->
+            <div class="relative w-full sm:w-64 lg:w-72">
+                <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 transition-colors" :class="{'text-blue-500': searchQuery}"></i>
+                <input 
+                    v-model="searchQuery" 
+                    type="text" 
+                    placeholder="Cari matkul, absen, dll..." 
+                    class="w-full bg-white border border-slate-300 rounded-lg text-sm pl-9 pr-8 py-2 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all shadow-sm"
+                >
+                <button v-if="searchQuery" @click="searchQuery = ''" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors active:scale-90">
+                    <i data-lucide="x-circle" class="w-4 h-4"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- KONTEN UTAMA -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8">
+        
+        <!-- KOLOM KIRI: To-Do List -->
+        <div class="lg:col-span-7 space-y-4">
+            <div class="flex flex-wrap items-center justify-between mb-1 gap-2">
+                <h2 class="text-lg font-semibold flex items-center text-slate-700">
+                    <i data-lucide="check-square" class="w-5 h-5 mr-2 text-blue-500"></i> Tugas & Deadline
+                </h2>
+                
+                <div class="flex bg-slate-200/60 p-1 rounded-lg text-xs font-medium relative">
+                    <button @click="filterStatus = 'all'" :class="['px-3 py-1 rounded-md transition-all duration-300 active:scale-95 relative z-10', filterStatus === 'all' ? 'text-blue-700 shadow-sm bg-white' : 'text-slate-500 hover:text-slate-700']">Semua</button>
+                    <button @click="filterStatus = 'active'" :class="['px-3 py-1 rounded-md transition-all duration-300 active:scale-95 relative z-10', filterStatus === 'active' ? 'text-blue-700 shadow-sm bg-white' : 'text-slate-500 hover:text-slate-700']">Aktif</button>
+                    <button @click="filterStatus = 'done'" :class="['px-3 py-1 rounded-md transition-all duration-300 active:scale-95 relative z-10', filterStatus === 'done' ? 'text-blue-700 shadow-sm bg-white' : 'text-slate-500 hover:text-slate-700']">Selesai</button>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden transition-all">
+                <div v-show="!searchQuery && !searchDate" class="p-3 border-b border-slate-100 bg-slate-50/80 flex flex-col sm:flex-row gap-2 items-center">
+                    <input v-model="newTask.title" @keyup.enter="addTask" type="text" placeholder="Ada tugas apa hari ini?" class="w-full bg-white border border-slate-200 rounded-lg text-sm px-3 py-2.5 focus:outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-500/10 transition-all">
+                    <div class="flex gap-2 w-full sm:w-auto">
+                        <input v-model="newTask.deadline" type="date" class="bg-white text-sm border border-slate-200 rounded-lg px-2 py-2.5 text-slate-600 focus:outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-500/10 transition-all cursor-pointer">
+                        <button @click="addTask" class="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2.5 px-5 rounded-lg transition-all active:scale-95 shadow-sm hover:shadow text-center flex items-center justify-center">
+                            <i data-lucide="plus" class="w-4 h-4 mr-1"></i> Tambah
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="p-3 bg-slate-50/30 overflow-y-auto max-h-[60vh] relative">
+                    <transition-group name="list" tag="ul" class="space-y-3 relative">
+                        <li v-for="task in filteredAndSortedTasks" :key="task.id" :class="['border rounded-xl p-3 shadow-sm relative overflow-hidden transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md w-full', getUrgencyInfo(task.deadline, task.done).cardClass]">
+                            <div :class="['absolute left-0 top-0 bottom-0 w-1.5 transition-colors duration-300', getUrgencyInfo(task.deadline, task.done).ribbonClass]"></div>
+                            
+                            <div class="flex items-start gap-3 pl-2">
+                                <button @click="toggleTask(task)" :class="['mt-0.5 w-5 h-5 rounded-md flex-shrink-0 flex items-center justify-center border transition-all duration-300 group', task.done ? 'bg-slate-400 border-slate-400 text-white shadow-inner' : 'bg-white border-slate-300 text-transparent hover:border-blue-400 hover:bg-blue-50']">
+                                    <i data-lucide="check" :class="['w-3.5 h-3.5 transition-transform duration-300', task.done ? 'scale-100' : 'scale-0 group-hover:scale-50 group-hover:text-blue-300']"></i>
+                                </button>
+                                
+                                <div class="flex-1 min-w-0">
+                                    <p :class="['text-sm font-medium transition-all duration-300', task.done ? 'line-through text-slate-400' : 'text-slate-800']" v-html="highlightText(task.title)"></p>
+                                    
+                                    <div class="mt-1.5 flex items-center gap-2">
+                                        <span v-if="task.deadline" :class="['text-xs font-medium px-2 py-0.5 rounded border shadow-sm flex items-center transition-colors', task.done ? 'bg-slate-100 text-slate-400 border-slate-200' : 'bg-white text-slate-500 border-slate-200']">
+                                            <i data-lucide="calendar" class="w-3 h-3 mr-1"></i> {{ task.deadline }}
+                                        </span>
+                                        <span v-if="!task.done" :class="['text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded transition-colors', getUrgencyInfo(task.deadline, task.done).badgeClass]">{{ getUrgencyInfo(task.deadline, task.done).badgeText }}</span>
+                                    </div>
+                                </div>
+                                
+                                <button @click="deleteTask(task.id)" class="text-slate-300 hover:text-red-500 hover:bg-red-50 p-2 rounded-lg transition-all duration-200 active:scale-90 flex-shrink-0 opacity-60 hover:opacity-100">
+                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </li>
+                    </transition-group>
+                    
+                    <div v-if="filteredAndSortedTasks.length === 0" class="p-10 flex flex-col items-center justify-center text-center text-slate-400 opacity-80 transition-opacity">
+                        <i data-lucide="coffee" class="w-10 h-10 mb-3 text-slate-300"></i>
+                        <p class="text-sm font-medium">Beres semua!</p>
+                        <p class="text-xs mt-1">Tidak ada tugas pada filter/tanggal ini.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- KOLOM KANAN: Arsip Drive -->
+        <div class="lg:col-span-5 space-y-4 mt-6 lg:mt-0">
+            <h2 class="text-lg font-semibold flex items-center text-slate-700 mb-1">
+                <i data-lucide="folder-tree" class="w-5 h-5 mr-2 text-blue-500"></i> Riwayat Arsip
+                <i v-if="isLoadingArsip" data-lucide="loader-2" class="w-4 h-4 ml-2 animate-spin text-blue-500"></i>
+            </h2>
+            
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-2 sm:p-4">
+                <div v-for="(kategoriData, namaMatkul) in filteredGroupedArsip" :key="namaMatkul" class="mb-2">
+                    <button @click="toggleExpand(namaMatkul)" class="w-full flex items-center justify-between bg-slate-50 hover:bg-blue-50/60 border border-slate-200 px-4 py-3 rounded-lg transition-all duration-200 active:scale-[0.98]">
+                        <div class="flex items-center text-sm font-semibold text-slate-700">
+                            <i data-lucide="book-open" class="w-4 h-4 mr-2.5 text-blue-500 transition-transform group-hover:scale-110"></i> <span v-html="highlightText(namaMatkul)"></span>
+                        </div>
+                        <i data-lucide="chevron-down" :class="['w-4 h-4 text-slate-400 transition-transform duration-300 ease-out', expandedMatkul[namaMatkul] || searchQuery || searchDate ? 'rotate-180' : '']"></i>
+                    </button>
+                    
+                    <div :class="['accordion-wrapper', expandedMatkul[namaMatkul] || searchQuery || searchDate ? 'is-open' : '']">
+                        <div class="accordion-inner">
+                            <div class="pt-2 px-1 pb-2 border-x border-b border-slate-100 rounded-b-lg mx-1 bg-white shadow-inner shadow-slate-50/50">
+                                <div v-for="(files, kategori) in kategoriData" :key="kategori" class="px-3 pt-2">
+                                    <h6 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 flex items-center">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-slate-300 mr-1.5 shadow-sm"></span> <span v-html="highlightText(kategori)"></span>
+                                    </h6>
+                                    <div class="space-y-1.5 mb-2">
+                                        <a v-for="file in files" :key="file.id" :href="file.link_file" target="_blank" class="group flex flex-col p-2.5 rounded-lg border border-slate-100 bg-slate-50/50 hover:bg-blue-50 hover:border-blue-200 hover:shadow-sm transition-all duration-200 active:scale-[0.99] relative overflow-hidden">
+                                            <div class="absolute left-0 top-0 bottom-0 w-0.5 bg-blue-400 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                            
+                                            <div class="flex justify-between items-start w-full pl-1">
+                                                <p class="text-xs font-semibold text-slate-700 truncate group-hover:text-blue-700 transition-colors" v-html="highlightText(file.judul)"></p>
+                                                <i data-lucide="external-link" class="w-3.5 h-3.5 text-slate-300 group-hover:text-blue-500 group-hover:scale-110 transition-all flex-shrink-0 ml-2"></i>
+                                            </div>
+                                            <div class="flex justify-between items-center mt-1 w-full pl-1">
+                                                <p class="text-[10px] text-slate-400 truncate group-hover:text-slate-500 transition-colors">{{ file.nama_file }}</p>
+                                                <span class="text-[10px] font-medium bg-white text-slate-500 px-1.5 py-0.5 rounded border border-slate-200 ml-2 whitespace-nowrap shadow-sm group-hover:border-blue-100">
+                                                    {{ file.tanggal }}
+                                                </span>
+                                            </div>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-if="Object.keys(filteredGroupedArsip).length === 0 && !isLoadingArsip" class="text-center py-8 flex flex-col items-center opacity-80">
+                    <i data-lucide="inbox" class="w-8 h-8 text-slate-300 mb-2"></i>
+                    <p class="text-sm text-slate-500">Tidak ada rekam arsip ditemukan.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- FOOTER -->
+    <footer class="mt-12 border-t border-slate-200 pt-8 pb-6 flex flex-col items-center gap-4 relative">
+        <img src="Solidaritymforever.jpeg" alt="Solidarity Forever" class="h-10 sm:h-12 w-auto object-contain rounded shadow-sm opacity-80 hover:opacity-100 transition-opacity duration-300">
+        
+        <p class="text-sm text-slate-500 flex items-center justify-center gap-2 text-center flex-wrap px-4">
+            &copy; 2026 <span class="font-semibold text-slate-700">Ardita Rizki Fauzi</span> 
+            <span class="hidden sm:inline-block w-1 h-1 rounded-full bg-blue-400"></span> 
+            <span class="block sm:inline">Universitas 17 Agustus 1945 Surabaya</span>
+        </p>
+    </footer>
+
+    <!-- TOAST NOTIFICATION -->
+    <transition name="toast">
+        <div v-if="toast.show" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-xl shadow-slate-200/50 border text-sm font-medium w-[90%] md:w-auto max-w-sm backdrop-blur-sm" :class="toast.type === 'success' ? 'bg-white/95 border-green-200 text-slate-700' : (toast.type === 'error' ? 'bg-white/95 border-red-200 text-slate-700' : 'bg-slate-800/95 border-slate-700 text-white')">
+            <div :class="['w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 shadow-inner', toast.type === 'success' ? 'bg-green-100 text-green-600' : (toast.type === 'error' ? 'bg-red-100 text-red-500' : 'bg-slate-700 text-slate-200')]">
+                <i :data-lucide="toast.icon" class="w-4 h-4"></i>
+            </div>
+            <p v-html="toast.message" class="leading-tight"></p>
+        </div>
+    </transition>
+
+</div>
+
+<script>
+const { createApp, ref, computed, onMounted, nextTick } = Vue;
+
+createApp({
+    setup() {
+        const searchQuery = ref('');
+        const searchDate = ref(''); 
+        const filterStatus = ref('active'); 
+        const newTask = ref({ title: '', deadline: '' });
+        
+        // --- Sistem Toast ---
+        const toast = ref({ show: false, message: '', type: 'success', icon: 'check' });
+        let toastTimeout = null;
+        
+        const showToast = (message, type = 'success', icon = 'check') => {
+            toast.value.show = false;
+            clearTimeout(toastTimeout);
+            setTimeout(() => {
+                toast.value = { show: true, message, type, icon };
+                nextTick(() => lucide.createIcons());
+                toastTimeout = setTimeout(() => { toast.value.show = false; }, 3000);
+            }, 50);
+        };
+
+        const tasks = ref([
+            { id: 1, title: 'Makalah Etika Digital', done: false, deadline: '2026-10-14' },
+            { id: 2, title: 'Rakit BMS 4S', done: false, deadline: '2026-10-16' },
+            { id: 3, title: 'Beli Sepatu Lari', done: true, deadline: '2026-10-10' }
+        ]);
+
+        // --- Data Arsip dari Supabase ---
+        const arsip = ref([]);
+        const isLoadingArsip = ref(true);
+
+        const ambilDataDariSupabase = async () => {
+            const supabaseUrl = 'https://dfmgdljobxrtanxdnqou.supabase.co/rest/v1/arsip_kuliah?select=*';
+            const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRmbWdkbGpvYnhydGFueGRucW91Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE5Nzc3NzQsImV4cCI6MjEwNzU1Mzc3NH0.RjSnbLCLOqYvKJApzkvOThre1Mi6zHBrDbQMIv2ZRNQ';
+            
+            try {
+                const response = await fetch(supabaseUrl, {
+                    headers: {
+                        'apikey': supabaseKey,
+                        'Authorization': `Bearer ${supabaseKey}`
+                    }
+                });
+                
+                if (response.ok) {
+                    arsip.value = await response.json();
+                } else {
+                    console.error("Gagal koneksi ke Supabase:", response.status);
+                    showToast('Gagal memuat arsip dari server.', 'error', 'alert-circle');
+                }
+            } catch (error) {
+                console.error("Error mengambil arsip:", error);
+                showToast('Koneksi terputus.', 'error', 'wifi-off');
+            } finally {
+                isLoadingArsip.value = false;
+                nextTick(() => lucide.createIcons());
+            }
+        };
+
+        const filteredAndSortedTasks = computed(() => {
+            let result = tasks.value;
+            if (filterStatus.value === 'active') result = result.filter(t => !t.done);
+            if (filterStatus.value === 'done') result = result.filter(t => t.done);
+            if (searchQuery.value) result = result.filter(t => t.title.toLowerCase().includes(searchQuery.value.toLowerCase()));
+            if (searchDate.value) result = result.filter(t => t.deadline === searchDate.value);
+            return [...result].sort((a, b) => a.done - b.done || new Date(a.deadline || '2099') - new Date(b.deadline || '2099'));
+        });
+
+        const filteredGroupedArsip = computed(() => {
+            const query = searchQuery.value.toLowerCase();
+            const dateQuery = searchDate.value;
+            
+            const filteredArray = arsip.value.filter(item => {
+                let matchText = true;
+                let matchDate = true;
+                if (query) matchText = item.matkul.toLowerCase().includes(query) || item.kategori.toLowerCase().includes(query) || item.judul.toLowerCase().includes(query);
+                if (dateQuery) matchDate = item.tanggal === dateQuery;
+                return matchText && matchDate;
+            });
+
+            return filteredArray.reduce((acc, item) => {
+                acc[item.matkul] = acc[item.matkul] || {};
+                acc[item.matkul][item.kategori] = acc[item.matkul][item.kategori] || [];
+                acc[item.matkul][item.kategori].push(item);
+                return acc;
+            }, {});
+        });
+
+        const highlightText = (text) => {
+            if (!searchQuery.value) return text;
+            const regex = new RegExp(`(${searchQuery.value})`, 'gi');
+            return text.replace(regex, '<span class="bg-yellow-200 text-slate-900 rounded px-0.5 shadow-sm">$1</span>');
+        };
+
+        const expandedMatkul = ref({});
+        const toggleExpand = (matkul) => expandedMatkul.value[matkul] = !expandedMatkul.value[matkul];
+
+        const addTask = () => {
+            if (!newTask.value.title) {
+                showToast('Nama tugas tidak boleh kosong.', 'error', 'alert-circle');
+                return;
+            }
+            tasks.value.unshift({ id: Date.now(), title: newTask.value.title, done: false, deadline: newTask.value.deadline });
+            newTask.value = { title: '', deadline: '' };
+            showToast('Tugas baru dicatat!', 'success', 'check-circle');
+            nextTick(() => lucide.createIcons());
+        };
+
+        const deleteTask = (id) => {
+            tasks.value = tasks.value.filter(t => t.id !== id);
+            showToast('Tugas dihapus.', 'info', 'trash-2');
+        };
+        
+        const toggleTask = (task) => {
+            task.done = !task.done;
+            if(task.done) showToast('Mantap! <b>Selesai</b>', 'success', 'award');
+        };
+
+        const getUrgencyInfo = (deadline, done) => {
+            if (done) return { cardClass: 'bg-slate-50 border-slate-200 opacity-80', ribbonClass: 'bg-slate-300' };
+            if (!deadline) return { cardClass: 'bg-white border-blue-100', ribbonClass: 'bg-blue-300', badgeClass: 'bg-blue-50 text-blue-600 border border-blue-200', badgeText: 'Santai' };
+            const diffDays = Math.ceil((new Date(deadline).setHours(0,0,0,0) - new Date().setHours(0,0,0,0)) / 86400000);
+            if (diffDays < 0) return { cardClass: 'bg-red-50/30 border-red-200', ribbonClass: 'bg-red-500', badgeClass: 'bg-red-100 text-red-700', badgeText: `Telat ${-diffDays} Hari` };
+            if (diffDays === 0) return { cardClass: 'bg-orange-50/30 border-orange-200', ribbonClass: 'bg-orange-500', badgeClass: 'bg-orange-100 text-orange-700', badgeText: 'Hari Ini' };
+            if (diffDays <= 2) return { cardClass: 'bg-yellow-50/30 border-yellow-200', ribbonClass: 'bg-yellow-400', badgeClass: 'bg-yellow-100 text-yellow-800', badgeText: `${diffDays} Hari Lagi` };
+            return { cardClass: 'bg-green-50/20 border-green-200', ribbonClass: 'bg-green-400', badgeClass: 'bg-green-50 text-green-700 border border-green-200', badgeText: `${diffDays} Hari Lagi` };
+        };
+
+        onMounted(() => {
+            ambilDataDariSupabase();
+            setTimeout(() => lucide.createIcons(), 100);
+        });
+
+        return { 
+            searchQuery, searchDate, filterStatus, newTask, filteredAndSortedTasks, filteredGroupedArsip, toast, isLoadingArsip,
+            expandedMatkul, toggleExpand, highlightText, addTask, deleteTask, toggleTask, getUrgencyInfo 
+        };
+    }
+}).mount('#app');
+</script>
+</body>
+</html>
