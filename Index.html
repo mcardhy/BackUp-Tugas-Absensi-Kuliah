@@ -283,32 +283,50 @@ createApp({
             return [...result].sort((a, b) => a.done - b.done || new Date(a.deadline || '2099') - new Date(b.deadline || '2099'));
         });
 
-        const filteredGroupedArsip = computed(() => {
-            const query = searchQuery.value.toLowerCase();
-            const dateQuery = searchDate.value;
-            
-            const filteredArray = arsip.value.filter(item => {
-                let matchText = true;
-                let matchDate = true;
-                if (query) {
-                    const matkulMatch = item.matkul ? item.matkul.toLowerCase().includes(query) : false;
-                    const katMatch = item.kategori ? item.kategori.toLowerCase().includes(query) : false;
-                    const judulMatch = item.judul ? item.judul.toLowerCase().includes(query) : false;
-                    matchText = matkulMatch || katMatch || judulMatch;
-                }
-                if (dateQuery) matchDate = item.tanggal === dateQuery;
-                return matchText && matchDate;
-            });
+       // Fungsi bantuan untuk mengubah teks menjadi Title Case (misal: "matematika 1" -> "Matematika 1")
+const toTitleCase = (str) => {
+    if (!str) return 'Lainnya';
+    return str.trim().toLowerCase().replace(/\b\w/g, char => char.toUpperCase());
+};
 
-            return filteredArray.reduce((acc, item) => {
-                const matkulKey = item.matkul || 'Lainnya';
-                const katKey = item.kategori || 'Umum';
-                acc[matkulKey] = acc[matkulKey] || {};
-                acc[matkulKey][katKey] = acc[matkulKey][katKey] || [];
-                acc[matkulKey][katKey].push(item);
-                return acc;
-            }, {});
+const filteredGroupedArsip = computed(() => {
+    const query = searchQuery.value.toLowerCase();
+    const dateQuery = searchDate.value;
+    
+    const filteredArray = arsip.value.filter(item => {
+        let matchText = true;
+        let matchDate = true;
+        if (query) {
+            const matkulMatch = item.matkul ? item.matkul.toLowerCase().includes(query) : false;
+            const katMatch = item.kategori ? item.kategori.toLowerCase().includes(query) : false;
+            const judulMatch = item.judul ? item.judul.toLowerCase().includes(query) : false;
+            matchText = matkulMatch || katMatch || judulMatch;
+        }
+        if (dateQuery) matchDate = item.tanggal === dateQuery;
+        return matchText && matchDate;
+    });
+
+    return filteredArray.reduce((acc, item) => {
+        // Gabungkan huruf besar/kecil dengan Title Case
+        const matkulKey = toTitleCase(item.matkul);
+        const katKey = toTitleCase(item.kategori) || 'Umum';
+        
+        acc[matkulKey] = acc[matkulKey] || {};
+        acc[matkulKey][katKey] = acc[matkulKey][katKey] || [];
+        
+        // Buat judul file lebih informatif jika kolom judul hanya berupa angka (misal: "1" menjadi "Pertemuan 1")
+        const judulInformatif = (item.judul && !isNaN(item.judul.trim())) 
+            ? `Pertemuan ${item.judul.trim()}` 
+            : (item.judul || 'Tugas');
+
+        acc[matkulKey][katKey].push({
+            ...item,
+            judul: judulInformatif
         });
+        
+        return acc;
+    }, {});
+});
 
         const highlightText = (text) => {
             if (!text) return '';
