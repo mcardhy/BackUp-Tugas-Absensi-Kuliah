@@ -353,10 +353,20 @@ createApp({
             return [...result].sort((a, b) => a.done - b.done || new Date(a.deadline || '2099-12-31') - new Date(b.deadline || '2099-12-31'));
         });
 
-        const formatDeadline = (dateString) => {
+      const formatDeadline = (dateString) => {
             if (!dateString) return '';
-            const options = { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' };
-            return new Date(dateString).toLocaleDateString('id-ID', options).replace('.', ':');
+            // Jika format dari input datetime-local adalah "YYYY-MM-DDTHH:mm"
+            const parts = dateString.split('T');
+            if (parts.length !== 2) return dateString;
+
+            const [datePart, timePart] = parts;
+            const [year, month, day] = datePart.split('-');
+            
+            // Nama bulan singkat dalam bahasa Indonesia
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+            const monthName = months[parseInt(month, 10) - 1];
+
+            return `${day} ${monthName} ${year}, ${timePart}`;
         };
 
         const toTitleCase = (str) => {
