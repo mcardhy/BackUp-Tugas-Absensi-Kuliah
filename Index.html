@@ -100,7 +100,7 @@
                 <div v-show="!searchQuery && !searchDate" class="p-3 border-b border-slate-100 bg-slate-50/80 flex flex-col sm:flex-row gap-2 items-center">
                     <input v-model="newTask.title" @keyup.enter="addTask" type="text" placeholder="Ada tugas apa hari ini?" class="w-full bg-white border border-slate-200 rounded-lg text-sm px-3 py-2.5 focus:outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-500/10 transition-all">
                     <div class="flex gap-2 w-full sm:w-auto">
-                        <input v-model="newTask.deadline" type="date" class="bg-white text-sm border border-slate-200 rounded-lg px-2 py-2.5 text-slate-600 focus:outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-500/10 transition-all cursor-pointer">
+                        <input v-model="newTask.deadline" type="datetime-local" class="bg-white text-sm border border-slate-200 rounded-lg px-2 py-2.5 text-slate-600 focus:outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-500/10 transition-all cursor-pointer">
                         <button @click="addTask" class="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2.5 px-5 rounded-lg transition-all active:scale-95 shadow-sm text-center flex items-center justify-center gap-1">
                             <span>+</span> Tambah
                         </button>
@@ -120,9 +120,9 @@
                                 <div class="flex-1 min-w-0">
                                     <p :class="['text-sm font-medium transition-all duration-300', task.done ? 'line-through text-slate-400' : 'text-slate-800']" v-html="highlightText(task.title)"></p>
                                     
-                                    <div class="mt-1.5 flex items-center gap-2">
-                                        <span v-if="task.deadline" :class="['text-xs font-medium px-2 py-0.5 rounded border shadow-sm flex items-center gap-1 transition-colors', task.done ? 'bg-slate-100 text-slate-400 border-slate-200' : 'bg-white text-slate-500 border-slate-200']">
-                                            📅 {{ task.deadline }}
+                                    <div class="mt-1.5 flex flex-wrap items-center gap-2">
+                                        <span v-if="task.deadline" :class="['text-xs font-medium px-2 py-0.5 rounded border shadow-sm flex items-center gap-1 transition-colors', task.done ? 'bg-slate-100 text-slate-400 border-slate-200' : 'bg-white text-slate-600 border-slate-200']">
+                                            ⏰ {{ formatDeadline(task.deadline) }}
                                         </span>
                                         <span v-if="!task.done" :class="['text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded transition-colors', getUrgencyInfo(task.deadline, task.done).badgeClass]">{{ getUrgencyInfo(task.deadline, task.done).badgeText }}</span>
                                     </div>
@@ -218,7 +218,7 @@
 </div>
 
 <script>
-const { createApp, ref, computed, onMounted } = Vue;
+const { createApp, ref, computed, onMounted, onUnmounted } = Vue;
 
 createApp({
     setup() {
@@ -240,25 +240,51 @@ createApp({
         };
 
         // --- LOCALSTORAGE & SUPABASE CONFIG FOR TASKS ---
-        const STORAGE_KEY = 'sim_kuliah_tasks_v1';
+        const STORAGE_KEY = 'sim_kuliah_tasks_v2';
         const supabaseUrl = 'https://dfmgdljobxrtanxdnqou.supabase.co/rest/v1';
         const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRmbWdkbGpvYnhydGFueGRucW91Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE5Nzc3NzQsImV4cCI6MjEwNzU1Mzc3NH0.RjSnbLCLOqYvKJApzkvOThre1Mi6zHBrDbQMIv2ZRNQ';
         
         const isLoadingTasks = ref(false);
 
-        // Load awal dari localStorage agar instan
+        // Load awal dari localStorage
         const savedTasks = localStorage.getItem(STORAGE_KEY);
         const tasks = ref(savedTasks ? JSON.parse(savedTasks) : [
-            { id: 1, title: 'Makalah Etika Digital', done: false, deadline: '2026-10-14' },
-            { id: 2, title: 'Rakit BMS 4S', done: false, deadline: '2026-10-16' },
-            { id: 3, title: 'Beli Sepatu Lari', done: true, deadline: '2026-10-10' }
+            { id: 1, title: 'Makalah Etika Digital', done: false, deadline: '2026-10-14T23:59' },
+            { id: 2, title: 'Rakit BMS 4S', done: false, deadline: '2026-10-16T15:30' },
+            { id: 3, title: 'Beli Sepatu Lari', done: true, deadline: '2026-10-10T12:00' }
         ]);
 
         const saveToLocalStorage = () => {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks.value));
         };
 
-        // Sinkronisasi dengan Supabase (Load & Backup)
+        // Request Browser Notification Permission
+        const requestNotificationPermission = () => {
+            if ('Notification' in window && Notification.permission === 'default') {
+                Notification.requestPermission();
+            }
+        };
+
+        // Cek deadline secara berkala untuk notifikasi
+        let notificationInterval = null;
+        const checkDeadlinesForNotification = () => {
+            const now = new Date().getTime();
+            tasks.value.forEach(task => {
+                if (!task.done && task.deadline) {
+                    const target = new Date(task.deadline).getTime();
+                    const diffMins = Math.floor((target - now) / 60000);
+                    
+                    // Notifikasi jika sisa waktu tepat 30 menit atau 10 menit lagi
+                    if ((diffMins === 30 || diffMins === 10) && 'Notification' in window && Notification.permission === 'granted') {
+                        new Notification('⚠️ Peringatan Tugas SIM Kuliah', {
+                            body: `Tugas "${task.title}" akan hangus dalam ${diffMins} menit lagi!`,
+                            icon: 'Logo-Untag.jpg'
+                        });
+                    }
+                }
+            });
+        };
+
         const ambilTugasDariSupabase = async () => {
             isLoadingTasks.value = true;
             try {
@@ -269,11 +295,9 @@ createApp({
                 if (response.ok) {
                     const data = await response.json();
                     if (data && data.length > 0) {
-                        // Jika Supabase ada data, gunakan sebagai acuan dan perbarui localStorage
                         tasks.value = data;
                         saveToLocalStorage();
                     } else if (tasks.value.length > 0) {
-                        // Jika Supabase kosong tapi lokal ada, backup data lokal ke Supabase
                         for (const t of tasks.value) {
                             await fetch(`${supabaseUrl}/tugas_kuliah`, {
                                 method: 'POST',
@@ -310,13 +334,9 @@ createApp({
                 if (response.ok) {
                     const data = await response.json();
                     arsip.value = data;
-                } else {
-                    console.error("Gagal koneksi ke Supabase:", response.status);
-                    showToast('Gagal memuat arsip dari server.');
                 }
             } catch (error) {
                 console.error("Error mengambil arsip:", error);
-                showToast('Koneksi terputus.');
             } finally {
                 isLoadingArsip.value = false;
             }
@@ -327,9 +347,17 @@ createApp({
             if (filterStatus.value === 'active') result = result.filter(t => !t.done);
             if (filterStatus.value === 'done') result = result.filter(t => t.done);
             if (searchQuery.value) result = result.filter(t => t.title.toLowerCase().includes(searchQuery.value.toLowerCase()));
-            if (searchDate.value) result = result.filter(t => t.deadline === searchDate.value);
-            return [...result].sort((a, b) => a.done - b.done || new Date(a.deadline || '2099') - new Date(b.deadline || '2099'));
+            if (searchDate.value) {
+                result = result.filter(t => t.deadline && t.deadline.startsWith(searchDate.value));
+            }
+            return [...result].sort((a, b) => a.done - b.done || new Date(a.deadline || '2099-12-31') - new Date(b.deadline || '2099-12-31'));
         });
+
+        const formatDeadline = (dateString) => {
+            if (!dateString) return '';
+            const options = { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' };
+            return new Date(dateString).toLocaleDateString('id-ID', options).replace('.', ':');
+        };
 
         const toTitleCase = (str) => {
             if (!str) return 'Lainnya';
@@ -383,7 +411,7 @@ createApp({
         const expandedMatkul = ref({});
         const toggleExpand = (matkul) => expandedMatkul.value[matkul] = !expandedMatkul.value[matkul];
 
-        // --- TASK ACTIONS (LocalStorage + Supabase Sync) ---
+        // --- TASK ACTIONS ---
         const addTask = async () => {
             if (!newTask.value.title) {
                 showToast('Nama tugas tidak boleh kosong.');
@@ -401,7 +429,6 @@ createApp({
             newTask.value = { title: '', deadline: '' };
             showToast('Tugas baru dicatat!');
 
-            // Sync ke Supabase di background
             try {
                 await fetch(`${supabaseUrl}/tugas_kuliah`, {
                     method: 'POST',
@@ -422,14 +449,10 @@ createApp({
             saveToLocalStorage();
             showToast('Tugas dihapus.');
 
-            // Sync hapus ke Supabase di background
             try {
                 await fetch(`${supabaseUrl}/tugas_kuliah?id=eq.${id}`, {
                     method: 'DELETE',
-                    headers: { 
-                        'apikey': supabaseKey, 
-                        'Authorization': `Bearer ${supabaseKey}` 
-                    }
+                    headers: { 'apikey': supabaseKey, 'Authorization': `Bearer ${supabaseKey}` }
                 });
             } catch (e) {
                 console.error("Gagal hapus tugas di Supabase:", e);
@@ -441,7 +464,6 @@ createApp({
             saveToLocalStorage();
             if(task.done) showToast('Mantap! <b>Selesai</b>');
 
-            // Sync update status ke Supabase di background
             try {
                 await fetch(`${supabaseUrl}/tugas_kuliah?id=eq.${task.id}`, {
                     method: 'PATCH',
@@ -458,23 +480,49 @@ createApp({
         };
 
         const getUrgencyInfo = (deadline, done) => {
-            if (done) return { cardClass: 'bg-slate-50 border-slate-200 opacity-80', ribbonClass: 'bg-slate-300' };
+            if (done) return { cardClass: 'bg-slate-50 border-slate-200 opacity-80', ribbonClass: 'bg-slate-300', badgeClass: 'bg-slate-100 text-slate-500', badgeText: 'Selesai' };
             if (!deadline) return { cardClass: 'bg-white border-blue-100', ribbonClass: 'bg-blue-300', badgeClass: 'bg-blue-50 text-blue-600 border border-blue-200', badgeText: 'Santai' };
-            const diffDays = Math.ceil((new Date(deadline).setHours(0,0,0,0) - new Date().setHours(0,0,0,0)) / 86400000);
-            if (diffDays < 0) return { cardClass: 'bg-red-50/30 border-red-200', ribbonClass: 'bg-red-500', badgeClass: 'bg-red-100 text-red-700', badgeText: `Telat ${-diffDays} Hari` };
-            if (diffDays === 0) return { cardClass: 'bg-orange-50/30 border-orange-200', ribbonClass: 'bg-orange-500', badgeClass: 'bg-orange-100 text-orange-700', badgeText: 'Hari Ini' };
-            if (diffDays <= 2) return { cardClass: 'bg-yellow-50/30 border-yellow-200', ribbonClass: 'bg-yellow-400', badgeClass: 'bg-yellow-100 text-yellow-800', badgeText: `${diffDays} Hari Lagi` };
+            
+            const now = new Date().getTime();
+            const target = new Date(deadline).getTime();
+            const diffMs = target - now;
+            const diffMins = Math.floor(diffMs / 60000);
+            const diffHours = Math.floor(diffMs / 3600000);
+            const diffDays = Math.floor(diffMs / 86400000);
+
+            if (diffMs < 0) {
+                const absMins = Math.abs(diffMins);
+                const absHours = Math.abs(diffHours);
+                const absDays = Math.abs(diffDays);
+                let text = absDays > 0 ? `Telat ${absDays} Hari` : (absHours > 0 ? `Telat ${absHours} Jam` : `Telat ${absMins} Mnt`);
+                return { cardClass: 'bg-red-50/70 border-red-300 animate-pulse', ribbonClass: 'bg-red-600', badgeClass: 'bg-red-100 text-red-800 font-bold', badgeText: text };
+            }
+            if (diffMins <= 60 && diffMins > 0) {
+                return { cardClass: 'bg-orange-50/80 border-orange-300 ring-2 ring-orange-400/40', ribbonClass: 'bg-orange-600', badgeClass: 'bg-orange-100 text-orange-900 font-bold animate-bounce', badgeText: `⚠️ ${diffMins} Mnt Lagi!` };
+            }
+            if (diffHours < 24 && diffHours >= 0) {
+                return { cardClass: 'bg-amber-50/60 border-amber-300', ribbonClass: 'bg-amber-500', badgeClass: 'bg-amber-100 text-amber-800 font-semibold', badgeText: `⏳ ${diffHours} Jam Lagi` };
+            }
+            if (diffDays <= 2) {
+                return { cardClass: 'bg-yellow-50/40 border-yellow-200', ribbonClass: 'bg-yellow-400', badgeClass: 'bg-yellow-100 text-yellow-800', badgeText: `${diffDays + 1} Hari Lagi` };
+            }
             return { cardClass: 'bg-green-50/20 border-green-200', ribbonClass: 'bg-green-400', badgeClass: 'bg-green-50 text-green-700 border border-green-200', badgeText: `${diffDays} Hari Lagi` };
         };
 
         onMounted(() => {
             ambilDataDariSupabase();
             ambilTugasDariSupabase();
+            requestNotificationPermission();
+            notificationInterval = setInterval(checkDeadlinesForNotification, 60000); // Cek tiap 1 menit
+        });
+
+        onUnmounted(() => {
+            if (notificationInterval) clearInterval(notificationInterval);
         });
 
         return { 
             searchQuery, searchDate, filterStatus, newTask, filteredAndSortedTasks, filteredGroupedArsip, toast, isLoadingArsip, isLoadingTasks,
-            expandedMatkul, toggleExpand, highlightText, addTask, deleteTask, toggleTask, getUrgencyInfo 
+            expandedMatkul, toggleExpand, highlightText, addTask, deleteTask, toggleTask, getUrgencyInfo, formatDeadline 
         };
     }
 }).mount('#app');
