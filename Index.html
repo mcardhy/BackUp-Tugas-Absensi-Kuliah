@@ -29,6 +29,17 @@
         .accordion-wrapper { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.3s ease-out; }
         .accordion-wrapper.is-open { grid-template-rows: 1fr; }
         .accordion-inner { overflow: hidden; }
+
+        /* Custom styling untuk input datetime agar bersih ala fintech */
+        input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+            cursor: pointer;
+            filter: invert(0.5) sepia(1) saturate(5) hue-rotate(175deg);
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+        input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
+            opacity: 1;
+        }
     </style>
 </head>
 <body class="text-slate-800 antialiased flex flex-col min-h-screen selection:bg-blue-200 selection:text-blue-900">
@@ -54,7 +65,7 @@
                 <input 
                     v-model="searchDate" 
                     type="date" 
-                    class="w-full bg-white border border-slate-300 rounded-lg text-sm px-3 py-2 text-slate-600 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 shadow-sm transition-all cursor-pointer"
+                    class="w-full bg-white border border-slate-200 rounded-xl text-sm px-3.5 py-2.5 text-slate-600 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 shadow-sm transition-all cursor-pointer font-medium"
                     title="Filter Tanggal"
                 >
                 <button v-if="searchDate" @click="searchDate = ''" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500 bg-white px-1 transition-colors">
@@ -64,12 +75,12 @@
 
             <!-- Cari Teks -->
             <div class="relative w-full sm:w-64 lg:w-72">
-                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
+                <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
                 <input 
                     v-model="searchQuery" 
                     type="text" 
                     placeholder="Cari matkul, absen, dll..." 
-                    class="w-full bg-white border border-slate-300 rounded-lg text-sm pl-9 pr-8 py-2 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all shadow-sm"
+                    class="w-full bg-white border border-slate-200 rounded-xl text-sm pl-10 pr-9 py-2.5 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all shadow-sm font-medium"
                 >
                 <button v-if="searchQuery" @click="searchQuery = ''" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors">
                     ✖
@@ -86,57 +97,79 @@
             <div class="flex flex-wrap items-center justify-between mb-1 gap-2">
                 <h2 class="text-lg font-semibold flex items-center text-slate-700">
                     <span class="mr-2 text-blue-500">☑</span> Tugas & Deadline
-                    <span v-if="isLoadingTasks" class="ml-2 text-xs text-blue-500 animate-pulse">(Sinkronisasi...)</span>
+                    <span v-if="isLoadingTasks" class="ml-2 text-xs text-blue-500 font-medium animate-pulse bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full border border-blue-100">Sinkronisasi...</span>
                 </h2>
                 
-                <div class="flex bg-slate-200/60 p-1 rounded-lg text-xs font-medium relative">
-                    <button @click="filterStatus = 'all'" :class="['px-3 py-1 rounded-md transition-all duration-200', filterStatus === 'all' ? 'text-blue-700 shadow-sm bg-white' : 'text-slate-500 hover:text-slate-700']">Semua</button>
-                    <button @click="filterStatus = 'active'" :class="['px-3 py-1 rounded-md transition-all duration-200', filterStatus === 'active' ? 'text-blue-700 shadow-sm bg-white' : 'text-slate-500 hover:text-slate-700']">Aktif</button>
-                    <button @click="filterStatus = 'done'" :class="['px-3 py-1 rounded-md transition-all duration-200', filterStatus === 'done' ? 'text-blue-700 shadow-sm bg-white' : 'text-slate-500 hover:text-slate-700']">Selesai</button>
+                <div class="flex bg-slate-200/60 p-1 rounded-xl text-xs font-medium relative shadow-inner">
+                    <button @click="filterStatus = 'all'" :class="['px-3 py-1.5 rounded-lg transition-all duration-200', filterStatus === 'all' ? 'text-blue-700 shadow-sm bg-white font-semibold' : 'text-slate-500 hover:text-slate-700']">Semua</button>
+                    <button @click="filterStatus = 'active'" :class="['px-3 py-1.5 rounded-lg transition-all duration-200', filterStatus === 'active' ? 'text-blue-700 shadow-sm bg-white font-semibold' : 'text-slate-500 hover:text-slate-700']">Aktif</button>
+                    <button @click="filterStatus = 'done'" :class="['px-3 py-1.5 rounded-lg transition-all duration-200', filterStatus === 'done' ? 'text-blue-700 shadow-sm bg-white font-semibold' : 'text-slate-500 hover:text-slate-700']">Selesai</button>
                 </div>
             </div>
             
-            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden transition-all">
-                <div v-show="!searchQuery && !searchDate" class="p-3 border-b border-slate-100 bg-slate-50/80 flex flex-col sm:flex-row gap-2 items-center">
-                    <input v-model="newTask.title" @keyup.enter="addTask" type="text" placeholder="Ada tugas apa hari ini?" class="w-full bg-white border border-slate-200 rounded-lg text-sm px-3 py-2.5 focus:outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-500/10 transition-all">
-                    <div class="flex gap-2 w-full sm:w-auto">
-                        <!-- Input Waktu & Tanggal (datetime-local) -->
-                        <input v-model="newTask.deadline" type="datetime-local" class="bg-white text-sm border border-slate-200 rounded-lg px-2 py-2.5 text-slate-600 focus:outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-500/10 transition-all cursor-pointer" title="Tanggal & Waktu Deadline">
-                        <button @click="addTask" class="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2.5 px-5 rounded-lg transition-all active:scale-95 shadow-sm text-center flex items-center justify-center gap-1">
-                            <span>+</span> Tambah
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden transition-all">
+                <!-- FORM INPUT MODERN FINTECH STYLE -->
+                <div v-show="!searchQuery && !searchDate" class="p-4 border-b border-slate-100 bg-gradient-to-b from-slate-50/80 to-white flex flex-col gap-3">
+                    <div class="relative">
+                        <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm">📌</span>
+                        <input 
+                            v-model="newTask.title" 
+                            @keyup.enter="addTask" 
+                            type="text" 
+                            placeholder="Judul tugas baru (cth: Makalah Algoritma)..." 
+                            class="w-full bg-white border border-slate-200 rounded-xl text-sm pl-10 pr-4 py-3 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all shadow-sm font-medium text-slate-700 placeholder:text-slate-400"
+                        >
+                    </div>
+                    
+                    <div class="flex flex-col sm:flex-row gap-2.5 items-center">
+                        <div class="relative w-full sm:flex-1">
+                            <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs">⏰</span>
+                            <input 
+                                v-model="newTask.deadline" 
+                                type="datetime-local" 
+                                class="w-full bg-white text-sm border border-slate-200 rounded-xl pl-9 pr-3.5 py-2.5 text-slate-600 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all cursor-pointer font-medium shadow-sm"
+                                title="Tanggal & Waktu Deadline"
+                            >
+                        </div>
+                        <button 
+                            @click="addTask" 
+                            class="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-sm font-semibold py-2.5 px-6 rounded-xl transition-all duration-200 active:scale-95 shadow-md shadow-blue-500/20 text-center flex items-center justify-center gap-2 group"
+                        >
+                            <span class="text-base leading-none group-hover:rotate-90 transition-transform duration-300">+</span> 
+                            <span>Tambah Tugas</span>
                         </button>
                     </div>
                 </div>
                 
                 <div class="p-3 bg-slate-50/30 overflow-y-auto max-h-[60vh] relative">
                     <transition-group name="list" tag="ul" class="space-y-3 relative">
-                        <li v-for="task in filteredAndSortedTasks" :key="task.id" :class="['border rounded-xl p-3 shadow-sm relative overflow-hidden transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md w-full', getUrgencyInfo(task.deadline, task.done).cardClass]">
+                        <li v-for="task in filteredAndSortedTasks" :key="task.id" :class="['border rounded-xl p-3.5 shadow-sm relative overflow-hidden transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md w-full', getUrgencyInfo(task.deadline, task.done).cardClass]">
                             <div :class="['absolute left-0 top-0 bottom-0 w-1.5 transition-colors duration-300', getUrgencyInfo(task.deadline, task.done).ribbonClass]"></div>
                             
                             <div class="flex items-start gap-3 pl-2">
-                                <button @click="toggleTask(task)" :class="['mt-0.5 w-5 h-5 rounded-md flex-shrink-0 flex items-center justify-center border transition-all duration-300', task.done ? 'bg-slate-400 border-slate-400 text-white shadow-inner' : 'bg-white border-slate-300 text-transparent hover:border-blue-400 hover:bg-blue-50']">
+                                <button @click="toggleTask(task)" :class="['mt-0.5 w-5 h-5 rounded-lg flex-shrink-0 flex items-center justify-center border transition-all duration-300', task.done ? 'bg-slate-400 border-slate-400 text-white shadow-inner' : 'bg-white border-slate-300 text-transparent hover:border-blue-400 hover:bg-blue-50']">
                                     ✓
                                 </button>
                                 
                                 <div class="flex-1 min-w-0">
-                                    <p :class="['text-sm font-medium transition-all duration-300', task.done ? 'line-through text-slate-400' : 'text-slate-800']" v-html="highlightText(task.title)"></p>
+                                    <p :class="['text-sm font-semibold transition-all duration-300', task.done ? 'line-through text-slate-400' : 'text-slate-800']" v-html="highlightText(task.title)"></p>
                                     
-                                    <div class="mt-1.5 flex flex-wrap items-center gap-2">
-                                        <span v-if="task.deadline" :class="['text-xs font-medium px-2 py-0.5 rounded border shadow-sm flex items-center gap-1 transition-colors', task.done ? 'bg-slate-100 text-slate-400 border-slate-200' : 'bg-white text-slate-600 border-slate-200']">
+                                    <div class="mt-2 flex flex-wrap items-center gap-2">
+                                        <span v-if="task.deadline" :class="['text-xs font-medium px-2.5 py-1 rounded-lg border shadow-sm flex items-center gap-1.5 transition-colors', task.done ? 'bg-slate-100 text-slate-400 border-slate-200' : 'bg-white text-slate-600 border-slate-200/80']">
                                             ⏰ {{ formatDeadline(task.deadline) }}
                                         </span>
-                                        <span v-if="!task.done" :class="['text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded transition-colors', getUrgencyInfo(task.deadline, task.done).badgeClass]">{{ getUrgencyInfo(task.deadline, task.done).badgeText }}</span>
+                                        <span v-if="!task.done" :class="['text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-lg transition-colors shadow-xs', getUrgencyInfo(task.deadline, task.done).badgeClass]">{{ getUrgencyInfo(task.deadline, task.done).badgeText }}</span>
                                     </div>
                                 </div>
                                 
-                                <button @click="deleteTask(task.id)" class="text-slate-300 hover:text-red-500 hover:bg-red-50 p-1.5 rounded-lg transition-all duration-200 active:scale-90 flex-shrink-0 opacity-60 hover:opacity-100">
+                                <button @click="deleteTask(task.id)" class="text-slate-300 hover:text-red-500 hover:bg-red-50 p-1.5 rounded-xl transition-all duration-200 active:scale-90 flex-shrink-0 opacity-60 hover:opacity-100">
                                     🗑️
                                 </button>
                             </div>
                         </li>
                     </transition-group>
                     
-                    <div v-if="filteredAndSortedTasks.length === 0" class="p-10 flex flex-col items-center justify-center text-center text-slate-400 opacity-80">
+                    <div v-if="filteredAndSortedTasks.length === 0" class="p-12 flex flex-col items-center justify-center text-center text-slate-400 opacity-80">
                         <span class="text-3xl mb-2">☕</span>
                         <p class="text-sm font-medium">Beres semua!</p>
                         <p class="text-xs mt-1">Tidak ada tugas pada filter/tanggal ini.</p>
@@ -149,13 +182,13 @@
         <div class="lg:col-span-5 space-y-4 mt-6 lg:mt-0">
             <h2 class="text-lg font-semibold flex items-center text-slate-700 mb-1">
                 <span class="mr-2 text-blue-500">📁</span> Riwayat Arsip
-                <span v-if="isLoadingArsip" class="ml-2 text-xs text-blue-500 animate-pulse">(Memuat...)</span>
+                <span v-if="isLoadingArsip" class="ml-2 text-xs text-blue-500 animate-pulse font-medium bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full border border-blue-100">(Memuat...)</span>
             </h2>
             
-            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-2 sm:p-4">
-                <div v-for="(kategoriData, namaMatkul) in filteredGroupedArsip" :key="namaMatkul" class="mb-2">
-                    <button @click="toggleExpand(namaMatkul)" class="w-full flex items-center justify-between bg-slate-50 hover:bg-blue-50/60 border border-slate-200 px-4 py-3 rounded-lg transition-all duration-200">
-                        <div class="flex items-center text-sm font-semibold text-slate-700">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-3 sm:p-4">
+                <div v-for="(kategoriData, namaMatkul) in filteredGroupedArsip" :key="namaMatkul" class="mb-2.5">
+                    <button @click="toggleExpand(namaMatkul)" class="w-full flex items-center justify-between bg-slate-50/80 hover:bg-blue-50/60 border border-slate-200/80 px-4 py-3 rounded-xl transition-all duration-200 group">
+                        <div class="flex items-center text-sm font-semibold text-slate-700 group-hover:text-blue-700">
                             <span class="mr-2 text-blue-500">📖</span> <span v-html="highlightText(namaMatkul)"></span>
                         </div>
                         <span :class="['text-xs text-slate-400 transition-transform duration-300', expandedMatkul[namaMatkul] || searchQuery || searchDate ? 'rotate-180' : '']">▼</span>
@@ -163,22 +196,22 @@
                     
                     <div :class="['accordion-wrapper', expandedMatkul[namaMatkul] || searchQuery || searchDate ? 'is-open' : '']">
                         <div class="accordion-inner">
-                            <div class="pt-2 px-1 pb-2 border-x border-b border-slate-100 rounded-b-lg mx-1 bg-white shadow-inner">
+                            <div class="pt-2 px-1 pb-2 border-x border-b border-slate-100 rounded-b-xl mx-1 bg-white shadow-inner">
                                 <div v-for="(files, kategori) in kategoriData" :key="kategori" class="px-3 pt-2">
                                     <h6 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 flex items-center">
                                         <span class="w-1.5 h-1.5 rounded-full bg-slate-300 mr-1.5"></span> <span v-html="highlightText(kategori)"></span>
                                     </h6>
                                     <div class="space-y-1.5 mb-2">
-                                        <a v-for="(file, idx) in files" :key="file.id || idx" :href="file.link_file" target="_blank" class="group flex flex-col p-2.5 rounded-lg border border-slate-100 bg-slate-50/50 hover:bg-blue-50 hover:border-blue-200 hover:shadow-sm transition-all duration-200 relative overflow-hidden">
-                                            <div class="absolute left-0 top-0 bottom-0 w-0.5 bg-blue-400 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                        <a v-for="(file, idx) in files" :key="file.id || idx" :href="file.link_file" target="_blank" class="group flex flex-col p-2.5 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-blue-50/60 hover:border-blue-200 hover:shadow-sm transition-all duration-200 relative overflow-hidden">
+                                            <div class="absolute left-0 top-0 bottom-0 w-0.5 bg-blue-500 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                                             
                                             <div class="flex justify-between items-start w-full pl-1">
                                                 <p class="text-xs font-semibold text-slate-700 truncate group-hover:text-blue-700 transition-colors" v-html="highlightText(file.judul)"></p>
                                                 <span class="text-xs text-slate-300 group-hover:text-blue-500 ml-2">↗</span>
                                             </div>
-                                            <div class="flex justify-between items-center mt-1 w-full pl-1">
+                                            <div class="flex justify-between items-center mt-1.5 w-full pl-1">
                                                 <p class="text-[10px] text-slate-400 truncate group-hover:text-slate-500 transition-colors">{{ file.nama_file }}</p>
-                                                <span class="text-[10px] font-medium bg-white text-slate-500 px-1.5 py-0.5 rounded border border-slate-200 ml-2 whitespace-nowrap shadow-sm group-hover:border-blue-100">
+                                                <span class="text-[10px] font-medium bg-white text-slate-500 px-2 py-0.5 rounded-lg border border-slate-200 ml-2 whitespace-nowrap shadow-xs group-hover:border-blue-100">
                                                     {{ file.tanggal }}
                                                 </span>
                                             </div>
@@ -190,9 +223,9 @@
                     </div>
                 </div>
 
-                <div v-if="Object.keys(filteredGroupedArsip).length === 0 && !isLoadingArsip" class="text-center py-8 flex flex-col items-center opacity-80">
+                <div v-if="Object.keys(filteredGroupedArsip).length === 0 && !isLoadingArsip" class="text-center py-10 flex flex-col items-center opacity-80">
                     <span class="text-2xl mb-1">📥</span>
-                    <p class="text-sm text-slate-500">Tidak ada rekam arsip ditemukan.</p>
+                    <p class="text-sm text-slate-500 font-medium">Tidak ada rekam arsip ditemukan.</p>
                 </div>
             </div>
         </div>
@@ -202,16 +235,16 @@
     <footer class="mt-12 border-t border-slate-200 pt-8 pb-6 flex flex-col items-center gap-4 relative">
         <img src="Solidaritymforever.jpeg" onerror="this.style.display='none'" alt="Solidarity Forever" class="h-10 sm:h-12 w-auto object-contain rounded shadow-sm opacity-80 hover:opacity-100 transition-opacity">
         
-        <p class="text-sm text-slate-500 flex items-center justify-center gap-2 text-center flex-wrap px-4">
+        <p class="text-sm text-slate-500 flex items-center justify-center gap-2 text-center flex-wrap px-4 font-medium">
             &copy; 2026 <span class="font-semibold text-slate-700">Ardita Rizki Fauzi</span> 
-            <span class="hidden sm:inline-block w-1 h-1 rounded-full bg-blue-400"></span> 
+            <span class="hidden sm:inline-block w-1.5 h-1.5 rounded-full bg-blue-400"></span> 
             <span class="block sm:inline">Universitas 17 Agustus 1945 Surabaya</span>
         </p>
     </footer>
 
     <!-- TOAST NOTIFICATION -->
     <transition name="toast">
-        <div v-if="toast.show" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-xl border text-sm font-medium w-[90%] md:w-auto max-w-sm bg-white/95 text-slate-700 border-slate-200">
+        <div v-if="toast.show" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-3 rounded-2xl shadow-xl border text-sm font-medium w-[90%] md:w-auto max-w-sm bg-white/95 text-slate-700 border-slate-200 backdrop-blur-md">
             <p v-html="toast.message" class="leading-tight"></p>
         </div>
     </transition>
@@ -247,7 +280,6 @@ createApp({
         
         const isLoadingTasks = ref(false);
 
-        // Load awal dari localStorage
         const savedTasks = localStorage.getItem(STORAGE_KEY);
         const tasks = ref(savedTasks ? JSON.parse(savedTasks) : [
             { id: 1, title: 'Makalah Etika Digital', done: false, deadline: '2026-10-14T23:59' },
@@ -259,14 +291,12 @@ createApp({
             localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks.value));
         };
 
-        // Request Browser Notification Permission
         const requestNotificationPermission = () => {
             if ('Notification' in window && Notification.permission === 'default') {
                 Notification.requestPermission();
             }
         };
 
-        // Cek deadline setiap 1 menit untuk notifikasi browser
         let notificationInterval = null;
         const checkDeadlinesForNotification = () => {
             const now = new Date().getTime();
@@ -353,16 +383,14 @@ createApp({
             return [...result].sort((a, b) => a.done - b.done || new Date(a.deadline || '2099-12-31') - new Date(b.deadline || '2099-12-31'));
         });
 
-      const formatDeadline = (dateString) => {
+        const formatDeadline = (dateString) => {
             if (!dateString) return '';
-            // Jika format dari input datetime-local adalah "YYYY-MM-DDTHH:mm"
             const parts = dateString.split('T');
             if (parts.length !== 2) return dateString;
 
             const [datePart, timePart] = parts;
             const [year, month, day] = datePart.split('-');
             
-            // Nama bulan singkat dalam bahasa Indonesia
             const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
             const monthName = months[parseInt(month, 10) - 1];
 
@@ -523,7 +551,7 @@ createApp({
             ambilDataDariSupabase();
             ambilTugasDariSupabase();
             requestNotificationPermission();
-            notificationInterval = setInterval(checkDeadlinesForNotification, 60000); // Cek tiap 1 menit
+            notificationInterval = setInterval(checkDeadlinesForNotification, 60000);
         });
 
         onUnmounted(() => {
