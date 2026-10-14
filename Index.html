@@ -4,35 +4,28 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SIM Kuliah | Merah Putih</title>
-    <!-- Vue 3 -->
-    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- Vue 3 Production Build (Lebih Cepat & Stabil) -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
     
     <style>
-        /* Anti-FOUC: Sembunyikan elemen sampai Vue selesai dimuat */
         [v-cloak] { display: none; }
-        
         body { background-color: #f8fafc; font-family: 'Inter', sans-serif; }
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
         
-        /* Animasi List & Smooth Reordering */
         .list-move, 
-        .list-enter-active, .list-leave-active { transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
+        .list-enter-active, .list-leave-active { transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
         .list-enter-from { opacity: 0; transform: translateX(-20px) scale(0.95); }
         .list-leave-to { opacity: 0; transform: translateX(20px) scale(0.95); }
         .list-leave-active { position: absolute; } 
         
-        /* Animasi Toast */
-        .toast-enter-active, .toast-leave-active { transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .toast-enter-active, .toast-leave-active { transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         .toast-enter-from, .toast-leave-to { opacity: 0; transform: translateY(20px) scale(0.9); }
         
-        /* Animasi Accordion */
         .accordion-wrapper { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.3s ease-out; }
         .accordion-wrapper.is-open { grid-template-rows: 1fr; }
         .accordion-inner { overflow: hidden; }
@@ -44,19 +37,17 @@
     
     <!-- HEADER -->
     <header class="mb-6 border-b border-slate-200 pb-4 flex flex-col gap-4">
-        <!-- Baris Atas: Logo, Judul, Logo TM -->
         <div class="flex justify-between items-center w-full">
             <div class="flex items-center gap-3 sm:gap-4 group cursor-default">
-                <img src="Logo-Untag.jpg" alt="Logo Untag Surabaya" class="h-10 sm:h-12 md:h-14 w-auto object-contain drop-shadow-sm transition-transform duration-300 group-hover:scale-105">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/f/f6/Logo_Untag_Surabaya.png" alt="Logo Untag Surabaya" class="h-10 sm:h-12 md:h-14 w-auto object-contain drop-shadow-sm transition-transform duration-300 group-hover:scale-105">
                 <div>
                     <h1 class="text-xl sm:text-2xl font-bold text-slate-800 tracking-tight flex items-center">SIM Kuliah</h1>
                     <p class="text-xs sm:text-sm text-slate-500 mt-0.5">Ardita Rizki F. (0082) • Teknik Mesin</p>
                 </div>
             </div>
-            <img src="TM_Untag.webp" alt="Logo TM Untag" class="w-12 h-12 sm:w-14 sm:h-14 rounded-full object-cover border-2 border-white shadow-md bg-white transition-transform duration-300 hover:rotate-6 hover:scale-105">
+            <img src="TM_Untag.webp" onerror="this.src='https://via.placeholder.com/150?text=TM'" alt="Logo TM Untag" class="w-12 h-12 sm:w-14 sm:h-14 rounded-full object-cover border-2 border-white shadow-md bg-white transition-transform duration-300 hover:rotate-6 hover:scale-105">
         </div>
         
-        <!-- Baris Bawah: Filter & Pencarian -->
         <div class="flex flex-col sm:flex-row gap-3 w-full lg:justify-end">
             <!-- Filter Tanggal -->
             <div class="relative w-full sm:w-44 lg:w-48 group">
@@ -66,22 +57,22 @@
                     class="w-full bg-white border border-slate-300 rounded-lg text-sm px-3 py-2 text-slate-600 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 shadow-sm transition-all cursor-pointer"
                     title="Filter Tanggal"
                 >
-                <button v-if="searchDate" @click="searchDate = ''" class="absolute right-8 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500 bg-white px-1 transition-colors active:scale-90">
-                    <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                <button v-if="searchDate" @click="searchDate = ''" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500 bg-white px-1 transition-colors">
+                    ✕
                 </button>
             </div>
 
             <!-- Cari Teks -->
             <div class="relative w-full sm:w-64 lg:w-72">
-                <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 transition-colors" :class="{'text-blue-500': searchQuery}"></i>
+                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
                 <input 
                     v-model="searchQuery" 
                     type="text" 
                     placeholder="Cari matkul, absen, dll..." 
                     class="w-full bg-white border border-slate-300 rounded-lg text-sm pl-9 pr-8 py-2 focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all shadow-sm"
                 >
-                <button v-if="searchQuery" @click="searchQuery = ''" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors active:scale-90">
-                    <i data-lucide="x-circle" class="w-4 h-4"></i>
+                <button v-if="searchQuery" @click="searchQuery = ''" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors">
+                    ✖
                 </button>
             </div>
         </div>
@@ -94,13 +85,13 @@
         <div class="lg:col-span-7 space-y-4">
             <div class="flex flex-wrap items-center justify-between mb-1 gap-2">
                 <h2 class="text-lg font-semibold flex items-center text-slate-700">
-                    <i data-lucide="check-square" class="w-5 h-5 mr-2 text-blue-500"></i> Tugas & Deadline
+                    <span class="mr-2 text-blue-500">☑</span> Tugas & Deadline
                 </h2>
                 
                 <div class="flex bg-slate-200/60 p-1 rounded-lg text-xs font-medium relative">
-                    <button @click="filterStatus = 'all'" :class="['px-3 py-1 rounded-md transition-all duration-300 active:scale-95 relative z-10', filterStatus === 'all' ? 'text-blue-700 shadow-sm bg-white' : 'text-slate-500 hover:text-slate-700']">Semua</button>
-                    <button @click="filterStatus = 'active'" :class="['px-3 py-1 rounded-md transition-all duration-300 active:scale-95 relative z-10', filterStatus === 'active' ? 'text-blue-700 shadow-sm bg-white' : 'text-slate-500 hover:text-slate-700']">Aktif</button>
-                    <button @click="filterStatus = 'done'" :class="['px-3 py-1 rounded-md transition-all duration-300 active:scale-95 relative z-10', filterStatus === 'done' ? 'text-blue-700 shadow-sm bg-white' : 'text-slate-500 hover:text-slate-700']">Selesai</button>
+                    <button @click="filterStatus = 'all'" :class="['px-3 py-1 rounded-md transition-all duration-200', filterStatus === 'all' ? 'text-blue-700 shadow-sm bg-white' : 'text-slate-500 hover:text-slate-700']">Semua</button>
+                    <button @click="filterStatus = 'active'" :class="['px-3 py-1 rounded-md transition-all duration-200', filterStatus === 'active' ? 'text-blue-700 shadow-sm bg-white' : 'text-slate-500 hover:text-slate-700']">Aktif</button>
+                    <button @click="filterStatus = 'done'" :class="['px-3 py-1 rounded-md transition-all duration-200', filterStatus === 'done' ? 'text-blue-700 shadow-sm bg-white' : 'text-slate-500 hover:text-slate-700']">Selesai</button>
                 </div>
             </div>
             
@@ -109,8 +100,8 @@
                     <input v-model="newTask.title" @keyup.enter="addTask" type="text" placeholder="Ada tugas apa hari ini?" class="w-full bg-white border border-slate-200 rounded-lg text-sm px-3 py-2.5 focus:outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-500/10 transition-all">
                     <div class="flex gap-2 w-full sm:w-auto">
                         <input v-model="newTask.deadline" type="date" class="bg-white text-sm border border-slate-200 rounded-lg px-2 py-2.5 text-slate-600 focus:outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-500/10 transition-all cursor-pointer">
-                        <button @click="addTask" class="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2.5 px-5 rounded-lg transition-all active:scale-95 shadow-sm hover:shadow text-center flex items-center justify-center">
-                            <i data-lucide="plus" class="w-4 h-4 mr-1"></i> Tambah
+                        <button @click="addTask" class="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2.5 px-5 rounded-lg transition-all active:scale-95 shadow-sm text-center flex items-center justify-center gap-1">
+                            <span>+</span> Tambah
                         </button>
                     </div>
                 </div>
@@ -121,30 +112,30 @@
                             <div :class="['absolute left-0 top-0 bottom-0 w-1.5 transition-colors duration-300', getUrgencyInfo(task.deadline, task.done).ribbonClass]"></div>
                             
                             <div class="flex items-start gap-3 pl-2">
-                                <button @click="toggleTask(task)" :class="['mt-0.5 w-5 h-5 rounded-md flex-shrink-0 flex items-center justify-center border transition-all duration-300 group', task.done ? 'bg-slate-400 border-slate-400 text-white shadow-inner' : 'bg-white border-slate-300 text-transparent hover:border-blue-400 hover:bg-blue-50']">
-                                    <i data-lucide="check" :class="['w-3.5 h-3.5 transition-transform duration-300', task.done ? 'scale-100' : 'scale-0 group-hover:scale-50 group-hover:text-blue-300']"></i>
+                                <button @click="toggleTask(task)" :class="['mt-0.5 w-5 h-5 rounded-md flex-shrink-0 flex items-center justify-center border transition-all duration-300', task.done ? 'bg-slate-400 border-slate-400 text-white shadow-inner' : 'bg-white border-slate-300 text-transparent hover:border-blue-400 hover:bg-blue-50']">
+                                    ✓
                                 </button>
                                 
                                 <div class="flex-1 min-w-0">
                                     <p :class="['text-sm font-medium transition-all duration-300', task.done ? 'line-through text-slate-400' : 'text-slate-800']" v-html="highlightText(task.title)"></p>
                                     
                                     <div class="mt-1.5 flex items-center gap-2">
-                                        <span v-if="task.deadline" :class="['text-xs font-medium px-2 py-0.5 rounded border shadow-sm flex items-center transition-colors', task.done ? 'bg-slate-100 text-slate-400 border-slate-200' : 'bg-white text-slate-500 border-slate-200']">
-                                            <i data-lucide="calendar" class="w-3 h-3 mr-1"></i> {{ task.deadline }}
+                                        <span v-if="task.deadline" :class="['text-xs font-medium px-2 py-0.5 rounded border shadow-sm flex items-center gap-1 transition-colors', task.done ? 'bg-slate-100 text-slate-400 border-slate-200' : 'bg-white text-slate-500 border-slate-200']">
+                                            📅 {{ task.deadline }}
                                         </span>
                                         <span v-if="!task.done" :class="['text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded transition-colors', getUrgencyInfo(task.deadline, task.done).badgeClass]">{{ getUrgencyInfo(task.deadline, task.done).badgeText }}</span>
                                     </div>
                                 </div>
                                 
-                                <button @click="deleteTask(task.id)" class="text-slate-300 hover:text-red-500 hover:bg-red-50 p-2 rounded-lg transition-all duration-200 active:scale-90 flex-shrink-0 opacity-60 hover:opacity-100">
-                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                <button @click="deleteTask(task.id)" class="text-slate-300 hover:text-red-500 hover:bg-red-50 p-1.5 rounded-lg transition-all duration-200 active:scale-90 flex-shrink-0 opacity-60 hover:opacity-100">
+                                    🗑️
                                 </button>
                             </div>
                         </li>
                     </transition-group>
                     
-                    <div v-if="filteredAndSortedTasks.length === 0" class="p-10 flex flex-col items-center justify-center text-center text-slate-400 opacity-80 transition-opacity">
-                        <i data-lucide="coffee" class="w-10 h-10 mb-3 text-slate-300"></i>
+                    <div v-if="filteredAndSortedTasks.length === 0" class="p-10 flex flex-col items-center justify-center text-center text-slate-400 opacity-80">
+                        <span class="text-3xl mb-2">☕</span>
                         <p class="text-sm font-medium">Beres semua!</p>
                         <p class="text-xs mt-1">Tidak ada tugas pada filter/tanggal ini.</p>
                     </div>
@@ -155,33 +146,33 @@
         <!-- KOLOM KANAN: Arsip Drive -->
         <div class="lg:col-span-5 space-y-4 mt-6 lg:mt-0">
             <h2 class="text-lg font-semibold flex items-center text-slate-700 mb-1">
-                <i data-lucide="folder-tree" class="w-5 h-5 mr-2 text-blue-500"></i> Riwayat Arsip
-                <i v-if="isLoadingArsip" data-lucide="loader-2" class="w-4 h-4 ml-2 animate-spin text-blue-500"></i>
+                <span class="mr-2 text-blue-500">📁</span> Riwayat Arsip
+                <span v-if="isLoadingArsip" class="ml-2 text-xs text-blue-500 animate-pulse">(Memuat...)</span>
             </h2>
             
             <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-2 sm:p-4">
                 <div v-for="(kategoriData, namaMatkul) in filteredGroupedArsip" :key="namaMatkul" class="mb-2">
-                    <button @click="toggleExpand(namaMatkul)" class="w-full flex items-center justify-between bg-slate-50 hover:bg-blue-50/60 border border-slate-200 px-4 py-3 rounded-lg transition-all duration-200 active:scale-[0.98]">
+                    <button @click="toggleExpand(namaMatkul)" class="w-full flex items-center justify-between bg-slate-50 hover:bg-blue-50/60 border border-slate-200 px-4 py-3 rounded-lg transition-all duration-200">
                         <div class="flex items-center text-sm font-semibold text-slate-700">
-                            <i data-lucide="book-open" class="w-4 h-4 mr-2.5 text-blue-500 transition-transform group-hover:scale-110"></i> <span v-html="highlightText(namaMatkul)"></span>
+                            <span class="mr-2 text-blue-500">📖</span> <span v-html="highlightText(namaMatkul)"></span>
                         </div>
-                        <i data-lucide="chevron-down" :class="['w-4 h-4 text-slate-400 transition-transform duration-300 ease-out', expandedMatkul[namaMatkul] || searchQuery || searchDate ? 'rotate-180' : '']"></i>
+                        <span :class="['text-xs text-slate-400 transition-transform duration-300', expandedMatkul[namaMatkul] || searchQuery || searchDate ? 'rotate-180' : '']">▼</span>
                     </button>
                     
                     <div :class="['accordion-wrapper', expandedMatkul[namaMatkul] || searchQuery || searchDate ? 'is-open' : '']">
                         <div class="accordion-inner">
-                            <div class="pt-2 px-1 pb-2 border-x border-b border-slate-100 rounded-b-lg mx-1 bg-white shadow-inner shadow-slate-50/50">
+                            <div class="pt-2 px-1 pb-2 border-x border-b border-slate-100 rounded-b-lg mx-1 bg-white shadow-inner">
                                 <div v-for="(files, kategori) in kategoriData" :key="kategori" class="px-3 pt-2">
                                     <h6 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 flex items-center">
-                                        <span class="w-1.5 h-1.5 rounded-full bg-slate-300 mr-1.5 shadow-sm"></span> <span v-html="highlightText(kategori)"></span>
+                                        <span class="w-1.5 h-1.5 rounded-full bg-slate-300 mr-1.5"></span> <span v-html="highlightText(kategori)"></span>
                                     </h6>
                                     <div class="space-y-1.5 mb-2">
-                                        <a v-for="file in files" :key="file.id" :href="file.link_file" target="_blank" class="group flex flex-col p-2.5 rounded-lg border border-slate-100 bg-slate-50/50 hover:bg-blue-50 hover:border-blue-200 hover:shadow-sm transition-all duration-200 active:scale-[0.99] relative overflow-hidden">
+                                        <a v-for="(file, idx) in files" :key="file.id || idx" :href="file.link_file" target="_blank" class="group flex flex-col p-2.5 rounded-lg border border-slate-100 bg-slate-50/50 hover:bg-blue-50 hover:border-blue-200 hover:shadow-sm transition-all duration-200 relative overflow-hidden">
                                             <div class="absolute left-0 top-0 bottom-0 w-0.5 bg-blue-400 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                                             
                                             <div class="flex justify-between items-start w-full pl-1">
                                                 <p class="text-xs font-semibold text-slate-700 truncate group-hover:text-blue-700 transition-colors" v-html="highlightText(file.judul)"></p>
-                                                <i data-lucide="external-link" class="w-3.5 h-3.5 text-slate-300 group-hover:text-blue-500 group-hover:scale-110 transition-all flex-shrink-0 ml-2"></i>
+                                                <span class="text-xs text-slate-300 group-hover:text-blue-500 ml-2">↗</span>
                                             </div>
                                             <div class="flex justify-between items-center mt-1 w-full pl-1">
                                                 <p class="text-[10px] text-slate-400 truncate group-hover:text-slate-500 transition-colors">{{ file.nama_file }}</p>
@@ -198,7 +189,7 @@
                 </div>
 
                 <div v-if="Object.keys(filteredGroupedArsip).length === 0 && !isLoadingArsip" class="text-center py-8 flex flex-col items-center opacity-80">
-                    <i data-lucide="inbox" class="w-8 h-8 text-slate-300 mb-2"></i>
+                    <span class="text-2xl mb-1">📥</span>
                     <p class="text-sm text-slate-500">Tidak ada rekam arsip ditemukan.</p>
                 </div>
             </div>
@@ -207,7 +198,7 @@
     
     <!-- FOOTER -->
     <footer class="mt-12 border-t border-slate-200 pt-8 pb-6 flex flex-col items-center gap-4 relative">
-        <img src="Solidaritymforever.jpeg" alt="Solidarity Forever" class="h-10 sm:h-12 w-auto object-contain rounded shadow-sm opacity-80 hover:opacity-100 transition-opacity duration-300">
+        <img src="Solidaritymforever.jpeg" onerror="this.style.display='none'" alt="Solidarity Forever" class="h-10 sm:h-12 w-auto object-contain rounded shadow-sm opacity-80 hover:opacity-100 transition-opacity">
         
         <p class="text-sm text-slate-500 flex items-center justify-center gap-2 text-center flex-wrap px-4">
             &copy; 2026 <span class="font-semibold text-slate-700">Ardita Rizki Fauzi</span> 
@@ -218,10 +209,7 @@
 
     <!-- TOAST NOTIFICATION -->
     <transition name="toast">
-        <div v-if="toast.show" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-xl shadow-slate-200/50 border text-sm font-medium w-[90%] md:w-auto max-w-sm backdrop-blur-sm" :class="toast.type === 'success' ? 'bg-white/95 border-green-200 text-slate-700' : (toast.type === 'error' ? 'bg-white/95 border-red-200 text-slate-700' : 'bg-slate-800/95 border-slate-700 text-white')">
-            <div :class="['w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 shadow-inner', toast.type === 'success' ? 'bg-green-100 text-green-600' : (toast.type === 'error' ? 'bg-red-100 text-red-500' : 'bg-slate-700 text-slate-200')]">
-                <i :data-lucide="toast.icon" class="w-4 h-4"></i>
-            </div>
+        <div v-if="toast.show" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-xl border text-sm font-medium w-[90%] md:w-auto max-w-sm bg-white/95 text-slate-700 border-slate-200">
             <p v-html="toast.message" class="leading-tight"></p>
         </div>
     </transition>
@@ -229,7 +217,7 @@
 </div>
 
 <script>
-const { createApp, ref, computed, onMounted, nextTick } = Vue;
+const { createApp, ref, computed, onMounted } = Vue;
 
 createApp({
     setup() {
@@ -238,16 +226,14 @@ createApp({
         const filterStatus = ref('active'); 
         const newTask = ref({ title: '', deadline: '' });
         
-        // --- Sistem Toast ---
-        const toast = ref({ show: false, message: '', type: 'success', icon: 'check' });
+        const toast = ref({ show: false, message: '' });
         let toastTimeout = null;
         
-        const showToast = (message, type = 'success', icon = 'check') => {
+        const showToast = (message) => {
             toast.value.show = false;
             clearTimeout(toastTimeout);
             setTimeout(() => {
-                toast.value = { show: true, message, type, icon };
-                nextTick(() => lucide.createIcons());
+                toast.value = { show: true, message };
                 toastTimeout = setTimeout(() => { toast.value.show = false; }, 3000);
             }, 50);
         };
@@ -258,7 +244,6 @@ createApp({
             { id: 3, title: 'Beli Sepatu Lari', done: true, deadline: '2026-10-10' }
         ]);
 
-        // --- Data Arsip dari Supabase ---
         const arsip = ref([]);
         const isLoadingArsip = ref(true);
 
@@ -275,17 +260,17 @@ createApp({
                 });
                 
                 if (response.ok) {
-                    arsip.value = await response.json();
+                    const data = await response.json();
+                    arsip.value = data;
                 } else {
                     console.error("Gagal koneksi ke Supabase:", response.status);
-                    showToast('Gagal memuat arsip dari server.', 'error', 'alert-circle');
+                    showToast('Gagal memuat arsip dari server.');
                 }
             } catch (error) {
                 console.error("Error mengambil arsip:", error);
-                showToast('Koneksi terputus.', 'error', 'wifi-off');
+                showToast('Koneksi terputus.');
             } finally {
                 isLoadingArsip.value = false;
-                nextTick(() => lucide.createIcons());
             }
         };
 
@@ -305,20 +290,28 @@ createApp({
             const filteredArray = arsip.value.filter(item => {
                 let matchText = true;
                 let matchDate = true;
-                if (query) matchText = item.matkul.toLowerCase().includes(query) || item.kategori.toLowerCase().includes(query) || item.judul.toLowerCase().includes(query);
+                if (query) {
+                    const matkulMatch = item.matkul ? item.matkul.toLowerCase().includes(query) : false;
+                    const katMatch = item.kategori ? item.kategori.toLowerCase().includes(query) : false;
+                    const judulMatch = item.judul ? item.judul.toLowerCase().includes(query) : false;
+                    matchText = matkulMatch || katMatch || judulMatch;
+                }
                 if (dateQuery) matchDate = item.tanggal === dateQuery;
                 return matchText && matchDate;
             });
 
             return filteredArray.reduce((acc, item) => {
-                acc[item.matkul] = acc[item.matkul] || {};
-                acc[item.matkul][item.kategori] = acc[item.matkul][item.kategori] || [];
-                acc[item.matkul][item.kategori].push(item);
+                const matkulKey = item.matkul || 'Lainnya';
+                const katKey = item.kategori || 'Umum';
+                acc[matkulKey] = acc[matkulKey] || {};
+                acc[matkulKey][katKey] = acc[matkulKey][katKey] || [];
+                acc[matkulKey][katKey].push(item);
                 return acc;
             }, {});
         });
 
         const highlightText = (text) => {
+            if (!text) return '';
             if (!searchQuery.value) return text;
             const regex = new RegExp(`(${searchQuery.value})`, 'gi');
             return text.replace(regex, '<span class="bg-yellow-200 text-slate-900 rounded px-0.5 shadow-sm">$1</span>');
@@ -329,23 +322,22 @@ createApp({
 
         const addTask = () => {
             if (!newTask.value.title) {
-                showToast('Nama tugas tidak boleh kosong.', 'error', 'alert-circle');
+                showToast('Nama tugas tidak boleh kosong.');
                 return;
             }
             tasks.value.unshift({ id: Date.now(), title: newTask.value.title, done: false, deadline: newTask.value.deadline });
             newTask.value = { title: '', deadline: '' };
-            showToast('Tugas baru dicatat!', 'success', 'check-circle');
-            nextTick(() => lucide.createIcons());
+            showToast('Tugas baru dicatat!');
         };
 
         const deleteTask = (id) => {
             tasks.value = tasks.value.filter(t => t.id !== id);
-            showToast('Tugas dihapus.', 'info', 'trash-2');
+            showToast('Tugas dihapus.');
         };
         
         const toggleTask = (task) => {
             task.done = !task.done;
-            if(task.done) showToast('Mantap! <b>Selesai</b>', 'success', 'award');
+            if(task.done) showToast('Mantap! <b>Selesai</b>');
         };
 
         const getUrgencyInfo = (deadline, done) => {
@@ -360,7 +352,6 @@ createApp({
 
         onMounted(() => {
             ambilDataDariSupabase();
-            setTimeout(() => lucide.createIcons(), 100);
         });
 
         return { 
